@@ -65,7 +65,7 @@ class MyFrontEnd(FrontEnd):
         # so, only call send_command() once per update()
         #
         # you can also calculate dead reckoning (forward kinematics) and other things like PID control here
-        self.sparki.send_command(80,0,80,0,0,0)
+        self.sparki.send_command()
 
 def main():
     # parse arguments
