@@ -1,13 +1,14 @@
-#test commit
-
 import pygame
 import sys
 import time
+from RobotLib.Math import *
 import math
 import argparse
 from RobotLib.FrontEnd import *
 from RobotLib.IO import *
+from RobotLib.SparkiGPS import *
 import numpy as np
+
 
 class MyFrontEnd(FrontEnd):
     """ Custom sub-class of FrontEnd
@@ -17,6 +18,8 @@ class MyFrontEnd(FrontEnd):
     def __init__(self,width,height,sparki):
         FrontEnd.__init__(self,width,height)
         self.sparki = sparki
+        self.MySparkiGPS = SparkiGPS.__init__(self,width,height)
+        
 
     def mouseup(self,x,y,button):
         # x,y is position of mouse click
@@ -48,12 +51,25 @@ class MyFrontEnd(FrontEnd):
         # for example, pygame.draw.line(surface,(0,0,0),(0,0),(10,10))
         # draws a black line from (0,0) to (10,0)
 	
-	#calculate the point for the center, based on robot location
-	#form the box based on orientation,
-	#reset 0,0 to be the middle
-	#draw the 4 lines
-	#draw the head line
-      	pygame.draw.line(surface,(255,0,0),(0,0),(10,10))
+	    #robot starting point in the middle facing right 
+         
+        
+        #what is my conversion from cm to map size? 1cm per pixel
+      #  T_SonarToRobot = transform(7.5, 5, 0) #sonar mount location
+      #  T_RobotToSonar = invert(T_SonarToRobot)
+ 
+        #set angular velocity in radians to set the motors.     
+        one = self.MySparkiGPS.backRight 
+        two = (20,20)
+
+       # pygame.draw.line(surface,(255,0,0),(10,10),(20,20))   
+        pygame.draw.line(surface,(255,0,0),one,two)      
+    	#draw the robot
+       # pygame.draw.line(surface,(255,0,0),self.MySparkiGPS.backRight,self.MySparkiGPS.frontRight) #right of robot
+       # pygame.draw.line(surface,(255,0,0),backRight,backLeft) #back of robot
+       # pygame.draw.line(surface,(0,0,255),frontRight,frontLeft)#front of robot, blue
+       # pygame.draw.line(surface,(255,0,0),frontLeft,backLeft)#left of robot
+        
 
     def update(self,time_delta):
         # this function is called approximately every 50 milliseconds
@@ -67,7 +83,9 @@ class MyFrontEnd(FrontEnd):
         # so, only call send_command() once per update()
         #
         # you can also calculate dead reckoning (forward kinematics) and other things like PID control here
-        self.sparki.send_command()
+       # self.MySparkiGPS.move(
+        self.sparki.send_command(10,0,10,0,0,0)
+
 
 def main():
     # parse arguments
