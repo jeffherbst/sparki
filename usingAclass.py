@@ -7,6 +7,7 @@ import argparse
 from RobotLib.FrontEnd import *
 from RobotLib.IO import *
 import numpy as np
+from RobotLib.SparkiClass import *
 
 
 class MyFrontEnd(FrontEnd):
@@ -15,16 +16,7 @@ class MyFrontEnd(FrontEnd):
     """
 
     #global variables because i couldn't make a class work.
-    global velocity
-    global omega
-    global theta
-    global sparkiCenter
-    global sonarReadingS
-    velocity = 0
-    omega = 0
-    theta = 0
-    sparkiCenter = vec(128.,128.)
-    sonarReadingS = vec(15.,0.)
+    MySparkiClass = SparkiClass()
 
     def __init__(self,width,height,sparki):
         FrontEnd.__init__(self,width,height)
@@ -36,36 +28,32 @@ class MyFrontEnd(FrontEnd):
 
     def keydown(self,key):
         # see https://www.pygame.org/docs/ref/key.html for pygame key names, such as pygame.K_UP 
-        global velocity
-        global omega
         #set velocities based on pressing of keys. 90% forward and back. small angular velocity to test
         if ( pygame.key.get_pressed()[pygame.K_UP] != 0 ):    
             print('up pressed')
-            velocity = 3.42
+            self.MySparkiClass.velocity = 3.42
         if ( pygame.key.get_pressed()[pygame.K_DOWN] != 0):
             print('down pressed')
-            velocity = -3.42
+            self.MySparkiClass.velocity = -3.42
         if ( pygame.key.get_pressed()[pygame.K_LEFT] != 0):
             print('left pressed')
-            omega += .2
+            self.MySparkiClass.omega += .2
         if ( pygame.key.get_pressed()[pygame.K_RIGHT] != 0 ):
             print('right pressed')
-            omega += -.2
+            self.MySparkiClass.omega += -.2
 
     def keyup(self,key):
         # see https://www.pygame.org/docs/ref/key.html for pygame key names, such as pygame.K_UP
         print('key released')
-        global velocity
-        global omega
         #set velocities to 0 on release of keys
         if (key == 273):
-            velocity = 0
+            self.MySparkiClass.velocity = 0
         if (key == 274):
-            velocity = 0
+            self.MySparkiClass.velocity = 0
         if (key == 275):
-            omega = 0
+            self.MySparkiClass.omega = 0
         if (key == 276):
-            omega = 0
+            self.MySparkiClass.omega = 0
         
     def draw(self,surface):
         # draw robot here
@@ -86,42 +74,7 @@ class MyFrontEnd(FrontEnd):
         
         #find all 6 points in child frame
         #set transformation matrix based on center and orientation
-        
-        
-        
-        global sparkiCenter
-        global sonarReadingS
-        #use this for sonar if it won't work
-        
-        #transform matrixes
-        transRtoM = transform(sparkiCenter[0],sparkiCenter[1],theta)
-        transStoR = transform(2.5,0.,0.)
-        transMtoR = invert(transRtoM)
-        transRtoS = invert(transStoR)
-
-        #points of sparki in robot frame
-        frontRightR = vec(5.,-4.5) 
-        frontLeftR = vec(5.,4.5)
-        backRightR = vec(-5.,-4.5)
-        backLeftR = vec(-5.,4.5)
-        centerR = vec(0.,0.)
-        sonarR = vec(2.5,0.) 
-        
-        #calculate all points of the robot and sonar using transform matrixes
-        centerM = mul(transRtoM,frontRightR)
-        frontRightM = mul(transRtoM,frontRightR)
-        frontLeftM = mul(transRtoM,frontLeftR)
-        backRightM = mul(transRtoM,backRightR)
-        backLeftM = mul(transRtoM,backLeftR)
-        sonarM = mul(transRtoM,sonarR)
-        sonarReadingM = mul(transRtoM,mul(transStoR,sonarReadingS))
-        
-        #draw robot and sonar, red for front of robot
-        pygame.draw.line(surface,(255,0,0),frontRightM,frontLeftM)
-        pygame.draw.line(surface,(0,255,0),frontRightM,backRightM)
-        pygame.draw.line(surface,(0,255,0),backRightM,backLeftM)
-        pygame.draw.line(surface,(0,255,0),frontLeftM,backLeftM)
-        pygame.draw.line(surface,(255,0,0),sonarM,sonarReadingM)
+        self.MySparkiClass.draw(surface)      
 
     def update(self,time_delta):
         # this function is called approximately every 50 milliseconds
@@ -135,44 +88,17 @@ class MyFrontEnd(FrontEnd):
         # so, only call send_command() once per update()
         #
         # you can also calculate dead reckoning (forward kinematics) and other things like PID control here
-        global theta
-        global omega
-        global velocity
-        global sparkiCenter
-        global sonarReadingS
 
-        #integrating over time
-        theta += omega * time_delta
-
-        #calculate center given known velocity and direction
-        sparkiCenter[0] += velocity * math.cos(theta) * time_delta
-        sparkiCenter[1] += velocity * math.sin(theta) * time_delta
-
-        #specific wheel velocity
-        velocityRight = velocity + (omega * (8.51/2))
-        velocityLeft = velocity - (omega * (8.52/2))
-        
-        #reverse flags and logic
-        rightReverse = 0
-        leftReverse = 0
-
-        if velocityRight < 0:
-            rightReverse = 1
-            velocityRight = abs(velocityRight)
-
-        if velocityLeft < 0:
-            leftReverse = 1
-            velocityLeft = abs(velocityLeft)
-
-        #debugging output
-        #print(sparkiCenter[0],sparkiCenter[1],theta,omega,velocity)
-       
-        #this will show a point if there is no reading, should show a line when readings come in
         #comment this out to show a static line pointing in the direction of the sonar
-        sonarReadingS[0] = self.sparki.dist
+        self.MySparkiClass.sonarDistance(self.sparki.dist) #will show a point if reading 0
+
+        #updates sparki's location
+        self.MySparkiClass.updateCenter(time_delta)
 
         #tell sparki how to move
-        self.sparki.send_command(int(velocityRight),rightReverse,int(velocityLeft),rightReverse,0,0)
+        #NEED TO FIX FUNCTIONS getCommandLeft and getCommandRight IN THE SPARKI CLASS FOR THIS TO WORK
+        self.sparki.send_command(self.MySparkiClass.getCommandLeft(),self.MySparkiClass.leftWheelDir,
+            self.MySparkiClass.getCommandRight(),self.MySparkiClass.rightWheelDir,0,0)
 
 
 def main():
