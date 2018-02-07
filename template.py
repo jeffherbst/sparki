@@ -19,10 +19,12 @@ class MyFrontEnd(FrontEnd):
     global omega
     global theta
     global sparkiCenter
+    global sonarReadingS
     velocity = 0
     omega = 0
     theta = 0
     sparkiCenter = vec(128.,128.)
+    sonarReadingS = vec(5.,0.)
 
     def __init__(self,width,height,sparki):
         FrontEnd.__init__(self,width,height)
@@ -86,20 +88,21 @@ class MyFrontEnd(FrontEnd):
         
         
         global sparkiCenter
+        global sonarReadingS
         #use this for sonar if it won't work
-        sonarPoint = (sparkiCenter[0]+math.cos(theta)*25.,sparkiCenter[1]+math.sin(theta)*25.) 
-        pygame.draw.line(surface,(0,0,0),sparkiCenter,sonarPoint)
+        #sonarPoint = (sparkiCenter[0]+math.cos(theta)*25.,sparkiCenter[1]+math.sin(theta)*25.) 
+        #pygame.draw.line(surface,(0,0,0),sparkiCenter,sonarPoint)
         
 
         transRtoM = transform(sparkiCenter[0],sparkiCenter[1],theta)
-        transMtoS = transform(2.5,0,0)
+        transStoR = transform(2.5,0.,0.)
         
-        frontRightR = vec(5,-4.5) 
-        frontLeftR = vec(5,4.5)
-        backRightR = vec(-5,-4.5)
-        backLeftR = vec(-5,4.5)
-        centerR = vec(0,0)
-        sonarR = vec(2.5,0) 
+        frontRightR = vec(5.,-4.5) 
+        frontLeftR = vec(5.,4.5)
+        backRightR = vec(-5.,-4.5)
+        backLeftR = vec(-5.,4.5)
+        centerR = vec(0.,0.)
+        sonarR = vec(2.5,0.) 
         
         centerM = mul(transRtoM,frontRightR)
         frontRightM = mul(transRtoM,frontRightR)
@@ -107,11 +110,13 @@ class MyFrontEnd(FrontEnd):
         backRightM = mul(transRtoM,backRightR)
         backLeftM = mul(transRtoM,backLeftR)
         sonarM = mul(transRtoM,sonarR)
+        sonarReadingM = mul(transRtoM,mul(transStoR,sonarReadingS))
         
-        pygame.draw.line(surface,(0,255,0),frontRightM,frontLeftM)
+        pygame.draw.line(surface,(255,0,0),frontRightM,frontLeftM)
         pygame.draw.line(surface,(0,255,0),frontRightM,backRightM)
         pygame.draw.line(surface,(0,255,0),backRightM,backLeftM)
         pygame.draw.line(surface,(0,255,0),frontLeftM,backLeftM)
+        pygame.draw.line(surface,(255,0,0),sonarM,sonarReadingM)
 
     def update(self,time_delta):
         # this function is called approximately every 50 milliseconds
@@ -129,15 +134,9 @@ class MyFrontEnd(FrontEnd):
         global omega
         global velocity
         global sparkiCenter
+        global sonarReadingS
 
         theta += omega * time_delta
-
-        transM = transform(128,128,45.*(math.pi/180.))
-        frontRight = vec(-4.255,5) 
-        frontLeft = vec(4.255,5)
-        backRight = vec(-4.255,-5)
-        backLeft = vec(4.255,-5)
-        center = vec(0,0) 
 
         sparkiCenter[0] += velocity * math.cos(theta) * time_delta
         sparkiCenter[1] += velocity * math.sin(theta) * time_delta
@@ -156,8 +155,10 @@ class MyFrontEnd(FrontEnd):
             velocityLeft = abs(velocityLeft)
 
         print(sparkiCenter[0],sparkiCenter[1],theta,omega,velocity)
-        move = np.matrix([[1,0,10],[0,1,0],[0,0,1]])
-        
+       
+        #this will show a point if there is no reading, should show a line when readings come in
+        sonarReadingS[0] = self.sparki.dist
+
         self.sparki.send_command(int(velocityRight),rightReverse,int(velocityLeft),rightReverse,0,0)
 
 
