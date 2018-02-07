@@ -6,7 +6,6 @@ import math
 import argparse
 from RobotLib.FrontEnd import *
 from RobotLib.IO import *
-from RobotLib.SparkiGPS import *
 import numpy as np
 
 
@@ -15,31 +14,54 @@ class MyFrontEnd(FrontEnd):
         You can write custom sub-routines here to respond to UI events and calculate updates
     """
 
+    #global variables because i couldn't make a class work.
+    global velocity
+    global omega
+    global theta
+    global sparkiCenter
+    velocity = 0
+    omega = 0
+    theta = 0
+    sparkiCenter = vec(128.,128.)
+
     def __init__(self,width,height,sparki):
         FrontEnd.__init__(self,width,height)
-        self.sparki = sparki
-        self.MySparkiGPS = SparkiGPS.__init__(self,width,height)
-        
-
+        self.sparki = sparki 
+                    
     def mouseup(self,x,y,button):
         # x,y is position of mouse click
         print('mouse clicked at %d, %d'%(x,y))
 
     def keydown(self,key):
         # see https://www.pygame.org/docs/ref/key.html for pygame key names, such as pygame.K_UP 
+        global velocity
+        global omega
         if ( pygame.key.get_pressed()[pygame.K_UP] != 0 ):    
             print('up pressed')
+            velocity = 3.42
         if ( pygame.key.get_pressed()[pygame.K_DOWN] != 0):
             print('down pressed')
+            velocity = -3.42
         if ( pygame.key.get_pressed()[pygame.K_LEFT] != 0):
             print('left pressed')
+            omega += .2
         if ( pygame.key.get_pressed()[pygame.K_RIGHT] != 0 ):
             print('right pressed')
+            omega += -.2
 
     def keyup(self,key):
         # see https://www.pygame.org/docs/ref/key.html for pygame key names, such as pygame.K_UP
         print('key released')
-        
+        global velocity
+        global omega
+        if (key == 273):
+            velocity = 0
+        if (key == 274):
+            velocity = 0
+        if (key == 275):
+            omega = 0
+        if (key == 276):
+            omega = 0
         
     def draw(self,surface):
         # draw robot here
@@ -50,26 +72,46 @@ class MyFrontEnd(FrontEnd):
         # use pygame.draw.line(surface,color,point1,point2) to draw a line
         # for example, pygame.draw.line(surface,(0,0,0),(0,0),(10,10))
         # draws a black line from (0,0) to (10,0)
-	
-	    #robot starting point in the middle facing right 
-         
-        
-        #what is my conversion from cm to map size? 1cm per pixel
-      #  T_SonarToRobot = transform(7.5, 5, 0) #sonar mount location
-      #  T_RobotToSonar = invert(T_SonarToRobot)
  
-        #set angular velocity in radians to set the motors.     
-        one = self.MySparkiGPS.backRight 
-        two = (20,20)
-
-       # pygame.draw.line(surface,(255,0,0),(10,10),(20,20))   
-        pygame.draw.line(surface,(255,0,0),one,two)      
-    	#draw the robot
-       # pygame.draw.line(surface,(255,0,0),self.MySparkiGPS.backRight,self.MySparkiGPS.frontRight) #right of robot
-       # pygame.draw.line(surface,(255,0,0),backRight,backLeft) #back of robot
-       # pygame.draw.line(surface,(0,0,255),frontRight,frontLeft)#front of robot, blue
-       # pygame.draw.line(surface,(255,0,0),frontLeft,backLeft)#left of robot
+       
+        #circumference of wheel = 15.71 cm
+        #4096 steps per revolution.
+        #1 step =.0038 cm /step
+        #max speed is 1000 steps per sec or 3.8 cm per sec
+        #90% is 900 or 3.42 cm per sec
         
+        #find all 6 points in child frame
+        #set transformation matrix based on center and orientation
+        
+        
+        
+        global sparkiCenter
+        #use this for sonar if it won't work
+        sonarPoint = (sparkiCenter[0]+math.cos(theta)*25.,sparkiCenter[1]+math.sin(theta)*25.) 
+        pygame.draw.line(surface,(0,0,0),sparkiCenter,sonarPoint)
+        
+
+        transRtoM = transform(sparkiCenter[0],sparkiCenter[1],theta)
+        transMtoS = transform(2.5,0,0)
+        
+        frontRightR = vec(5,-4.5) 
+        frontLeftR = vec(5,4.5)
+        backRightR = vec(-5,-4.5)
+        backLeftR = vec(-5,4.5)
+        centerR = vec(0,0)
+        sonarR = vec(2.5,0) 
+        
+        centerM = mul(transRtoM,frontRightR)
+        frontRightM = mul(transRtoM,frontRightR)
+        frontLeftM = mul(transRtoM,frontLeftR)
+        backRightM = mul(transRtoM,backRightR)
+        backLeftM = mul(transRtoM,backLeftR)
+        sonarM = mul(transRtoM,sonarR)
+        
+        pygame.draw.line(surface,(0,255,0),frontRightM,frontLeftM)
+        pygame.draw.line(surface,(0,255,0),frontRightM,backRightM)
+        pygame.draw.line(surface,(0,255,0),backRightM,backLeftM)
+        pygame.draw.line(surface,(0,255,0),frontLeftM,backLeftM)
 
     def update(self,time_delta):
         # this function is called approximately every 50 milliseconds
@@ -77,14 +119,46 @@ class MyFrontEnd(FrontEnd):
         # 
         # you can send an update command to sparki here
         # use self.sparki.send_command(left_speed,left_dir,right_speed,right_dir,servo,gripper_status)
-        # see docs in RobotLib/IO.py for more information
+        # see docs in RobotLib/IO.py for more information, #0 for forward. #0 for strop gripper_status
         #
         # if you send a message more than once per millisecond, the message will be dropped
         # so, only call send_command() once per update()
         #
         # you can also calculate dead reckoning (forward kinematics) and other things like PID control here
-       # self.MySparkiGPS.move(
-        self.sparki.send_command(10,0,10,0,0,0)
+        global theta
+        global omega
+        global velocity
+        global sparkiCenter
+
+        theta += omega * time_delta
+
+        transM = transform(128,128,45.*(math.pi/180.))
+        frontRight = vec(-4.255,5) 
+        frontLeft = vec(4.255,5)
+        backRight = vec(-4.255,-5)
+        backLeft = vec(4.255,-5)
+        center = vec(0,0) 
+
+        sparkiCenter[0] += velocity * math.cos(theta) * time_delta
+        sparkiCenter[1] += velocity * math.sin(theta) * time_delta
+        velocityRight = velocity + (omega * (8.51/2))
+        velocityLeft = velocity - (omega * (8.52/2))
+
+        rightReverse = 0
+        leftReverse = 0
+
+        if velocityRight < 0:
+            rightReverse = 1
+            velocityRight = abs(velocityRight)
+
+        if velocityLeft < 0:
+            leftReverse = 1
+            velocityLeft = abs(velocityLeft)
+
+        print(sparkiCenter[0],sparkiCenter[1],theta,omega,velocity)
+        move = np.matrix([[1,0,10],[0,1,0],[0,0,1]])
+        
+        self.sparki.send_command(int(velocityRight),rightReverse,int(velocityLeft),rightReverse,0,0)
 
 
 def main():
