@@ -38,6 +38,7 @@ class MyFrontEnd(FrontEnd):
         # see https://www.pygame.org/docs/ref/key.html for pygame key names, such as pygame.K_UP 
         global velocity
         global omega
+        #set velocities based on pressing of keys. 90% forward and back. small angular velocity to test
         if ( pygame.key.get_pressed()[pygame.K_UP] != 0 ):    
             print('up pressed')
             velocity = 3.42
@@ -56,6 +57,7 @@ class MyFrontEnd(FrontEnd):
         print('key released')
         global velocity
         global omega
+        #set velocities to 0 on release of keys
         if (key == 273):
             velocity = 0
         if (key == 274):
@@ -93,10 +95,13 @@ class MyFrontEnd(FrontEnd):
         #sonarPoint = (sparkiCenter[0]+math.cos(theta)*25.,sparkiCenter[1]+math.sin(theta)*25.) 
         #pygame.draw.line(surface,(0,0,0),sparkiCenter,sonarPoint)
         
-
+        #transform matrixes
         transRtoM = transform(sparkiCenter[0],sparkiCenter[1],theta)
         transStoR = transform(2.5,0.,0.)
-        
+        transMtoR = invert(transRtoM)
+        transRtoS = invert(transStoR)
+
+        #points of sparki in robot frame
         frontRightR = vec(5.,-4.5) 
         frontLeftR = vec(5.,4.5)
         backRightR = vec(-5.,-4.5)
@@ -104,6 +109,7 @@ class MyFrontEnd(FrontEnd):
         centerR = vec(0.,0.)
         sonarR = vec(2.5,0.) 
         
+        #calculate all points of the robot and sonar using transform matrixes
         centerM = mul(transRtoM,frontRightR)
         frontRightM = mul(transRtoM,frontRightR)
         frontLeftM = mul(transRtoM,frontLeftR)
@@ -112,6 +118,7 @@ class MyFrontEnd(FrontEnd):
         sonarM = mul(transRtoM,sonarR)
         sonarReadingM = mul(transRtoM,mul(transStoR,sonarReadingS))
         
+        #draw robot and sonar, red for front of robot
         pygame.draw.line(surface,(255,0,0),frontRightM,frontLeftM)
         pygame.draw.line(surface,(0,255,0),frontRightM,backRightM)
         pygame.draw.line(surface,(0,255,0),backRightM,backLeftM)
@@ -136,13 +143,18 @@ class MyFrontEnd(FrontEnd):
         global sparkiCenter
         global sonarReadingS
 
+        #integrating over time
         theta += omega * time_delta
 
+        #calculate center given known velocity and direction
         sparkiCenter[0] += velocity * math.cos(theta) * time_delta
         sparkiCenter[1] += velocity * math.sin(theta) * time_delta
+
+        #specific wheel velocity
         velocityRight = velocity + (omega * (8.51/2))
         velocityLeft = velocity - (omega * (8.52/2))
-
+        
+        #reverse flags and logic
         rightReverse = 0
         leftReverse = 0
 
@@ -154,11 +166,13 @@ class MyFrontEnd(FrontEnd):
             leftReverse = 1
             velocityLeft = abs(velocityLeft)
 
-        print(sparkiCenter[0],sparkiCenter[1],theta,omega,velocity)
+        #debugging output
+        #print(sparkiCenter[0],sparkiCenter[1],theta,omega,velocity)
        
         #this will show a point if there is no reading, should show a line when readings come in
         sonarReadingS[0] = self.sparki.dist
 
+        #tell sparki how to move
         self.sparki.send_command(int(velocityRight),rightReverse,int(velocityLeft),rightReverse,0,0)
 
 
