@@ -102,8 +102,9 @@ class MyFrontEnd(FrontEnd):
         # you can also calculate dead reckoning (forward kinematics) and other things like PID control here
 
         #comment this out to show a static line pointing in the direction of the sonar
-        self.MySparkiClass.sonarDistance(self.sparki.dist) #will show a point if reading 0
-
+        if simulationONLY != True:
+            self.MySparkiClass.sonarDistance(self.sparki.dist) #will show a point if reading 0
+        
         #updates sparki's location
         self.MySparkiClass.updateCenter(time_delta)
 
