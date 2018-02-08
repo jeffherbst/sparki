@@ -9,13 +9,15 @@ from RobotLib.IO import *
 import numpy as np
 from RobotLib.SparkiClass import *
 
+#if using only simulation, allows sparki to move faster
+simulationONLY = False
 
 class MyFrontEnd(FrontEnd):
     """ Custom sub-class of FrontEnd
         You can write custom sub-routines here to respond to UI events and calculate updates
     """
 
-    #global variables because i couldn't make a class work.
+    #custom sparki class
     MySparkiClass = SparkiClass()
 
     def __init__(self,width,height,sparki):
@@ -31,28 +33,38 @@ class MyFrontEnd(FrontEnd):
         #set velocities based on pressing of keys. 90% forward and back. small angular velocity to test
         if ( pygame.key.get_pressed()[pygame.K_UP] != 0 ):    
             print('up pressed')
-            self.MySparkiClass.velocity = 3.42
+            if simulationONLY :
+                self.MySparkiClass.velocity = 15
+            else:
+                self.MySparkiClass.velocity = 3.42
         if ( pygame.key.get_pressed()[pygame.K_DOWN] != 0):
             print('down pressed')
-            self.MySparkiClass.velocity = -3.42
+            if simulationONLY :
+                self.MySparkiClass.velocity = -15
+            else:
+                self.MySparkiClass.velocity = -3.42
         if ( pygame.key.get_pressed()[pygame.K_LEFT] != 0):
             print('left pressed')
-            self.MySparkiClass.omega += .2
+            if simulationONLY :
+                self.MySparkiClass.omega = .8
+            else:
+                self.MySparkiClass.omega = .2
         if ( pygame.key.get_pressed()[pygame.K_RIGHT] != 0 ):
             print('right pressed')
-            self.MySparkiClass.omega += -.2
+            if simulationONLY :
+                self.MySparkiClass.omega = -.8
+            else:
+                self.MySparkiClass.omega = -.2
 
     def keyup(self,key):
         # see https://www.pygame.org/docs/ref/key.html for pygame key names, such as pygame.K_UP
-        print('key released')
         #set velocities to 0 on release of keys
-        if (key == 273):
+        if ( pygame.key.get_pressed()[pygame.K_UP] == 0 and pygame.key.get_pressed()[pygame.K_DOWN] == 0):
+            print('linear released')
             self.MySparkiClass.velocity = 0
-        if (key == 274):
-            self.MySparkiClass.velocity = 0
-        if (key == 275):
-            self.MySparkiClass.omega = 0
-        if (key == 276):
+        
+        if ( pygame.key.get_pressed()[pygame.K_LEFT] == 0 and pygame.key.get_pressed()[pygame.K_RIGHT] == 0 ):
+            print('angular released')
             self.MySparkiClass.omega = 0
         
     def draw(self,surface):
